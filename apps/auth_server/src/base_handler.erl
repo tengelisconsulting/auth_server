@@ -12,7 +12,8 @@
 
 %% handler fns
 -export([
-         say_hi/1, say_hi/2
+         say_hi/1, say_hi/2,
+         create_account/1, create_account/2
         ]).
 
 
@@ -69,4 +70,10 @@ say_hi(allowed_methods) -> [<<"GET">>].
 say_hi(Req0, State0) ->
     Success = true,
     Response = <<"Hello get">>,
+    {Success, Response, Req0, State0}.
+
+create_account(allowed_methods) -> [<<"PUT">>].
+create_account(Req0, State0) ->
+    Success = true,
+    Response = <<"creating user...">>,
     {Success, Response, Req0, State0}.

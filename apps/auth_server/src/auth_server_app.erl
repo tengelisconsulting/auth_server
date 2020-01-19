@@ -11,7 +11,12 @@
 
 start(_StartType, _StartArgs) ->
     {ok, RuntimeArgs} = application:get_env(auth_server, runtime_args),
-    #{listen_port := ListenPort} = RuntimeArgs,
+    #{
+      listen_port := ListenPort,
+      db_api_port := DbApiPort,
+      db_api_host := DbApiHost
+     } = RuntimeArgs,
+    requests:start_db_api_con(DbApiHost, DbApiPort),
     Dispatch = cowboy_router:compile([
                                       {'_',
                                        routes()}
@@ -30,5 +35,7 @@ routes() ->
     [
      {"/test", base_handler,
       [base_handler, say_hi]
-     }
+     },
+     {"/account/create", base_handler,
+      [base_handler, create_account]}
     ].
