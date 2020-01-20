@@ -16,7 +16,6 @@ start(_StartType, _StartArgs) ->
       db_api_port := DbApiPort,
       db_api_host := DbApiHost
      } = RuntimeArgs,
-    requests:start_db_api_con(DbApiHost, DbApiPort),
     Dispatch = cowboy_router:compile([
                                       {'_',
                                        routes()}

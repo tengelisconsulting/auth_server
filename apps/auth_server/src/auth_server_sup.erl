@@ -29,7 +29,23 @@ init([]) ->
     SupFlags = #{strategy => one_for_all,
                  intensity => 0,
                  period => 1},
-    ChildSpecs = [],
+    ReqSupChild = #{
+                   id => req_sup_0,
+                   start => {req_sup,
+                             start_link,
+                             [[
+                               #{id => pg,
+                                 host => "127.0.0.1",
+                                 port => 8888}
+                              ]]},
+                    restart => permanent,
+                    shutdown => 5000,
+                    type => supervisor,
+                    modules => [req_sup]
+                  },
+    ChildSpecs = [
+                  ReqSupChild
+                 ],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions
