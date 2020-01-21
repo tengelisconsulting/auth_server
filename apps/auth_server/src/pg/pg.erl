@@ -12,7 +12,7 @@
 
 %% API
 -export([
-         start_link/0,
+         start_link/2,
          get/1,
          post/2
         ]).
@@ -41,12 +41,8 @@ post(Url, Data) ->
 %% Starts the server
 %% @end
 %%--------------------------------------------------------------------
--spec start_link() -> {ok, Pid :: pid()} |
-                      {error, Error :: {already_started, pid()}} |
-                      {error, Error :: term()} |
-                      ignore.
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(Host, Port) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Host, Port], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -63,9 +59,9 @@ start_link() ->
                               {ok, State :: term(), hibernate} |
                               {stop, Reason :: term()} |
                               ignore.
-init([]) ->
+init([Host, Port]) ->
     process_flag(trap_exit, true),
-    {ok, _Pid} = req_mgr:open(pg_con1, "127.0.0.1", 5000),
+    {ok, _Pid} = req_mgr:open(pg_con1, Host, Port),
     {ok, #state{con=pg_con1}}.
 
 %%--------------------------------------------------------------------

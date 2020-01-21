@@ -11,7 +11,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -27,13 +27,8 @@
 %% Starts the supervisor
 %% @end
 %%--------------------------------------------------------------------
--spec start_link() -> {ok, Pid :: pid()} |
-                      {error, {already_started, Pid :: pid()}} |
-                      {error, {shutdown, term()}} |
-                      {error, term()} |
-                      ignore.
-start_link() ->
-    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
+start_link(Args) ->
+    supervisor:start_link({local, ?SERVER}, ?MODULE, [Args]).
 
 %%%===================================================================
 %%% Supervisor callbacks
@@ -52,14 +47,16 @@ start_link() ->
                   {ok, {SupFlags :: supervisor:sup_flags(),
                         [ChildSpec :: supervisor:child_spec()]}} |
                   ignore.
-init([]) ->
-
+init([Args]) ->
+    #{
+      db_api_host:=Host,
+      db_api_port:=Port
+     } = Args,
     SupFlags = #{strategy => one_for_one,
                  intensity => 1,
                  period => 5},
-
     Pg = #{id => pg,
-               start => {pg, start_link, []},
+               start => {pg, start_link, [Host, Port]},
                restart => permanent,
                shutdown => 5000,
                type => worker,
