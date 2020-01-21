@@ -13,7 +13,8 @@
 %% API
 -export([
          start_link/2,
-         get/2
+         get/2,
+         post/3
         ]).
 
 %% gen_server callbacks
@@ -32,6 +33,9 @@
 %%%===================================================================
 get(ReqPs, Url) ->
     gen_server:call(ReqPs, {get, Url}).
+
+post(ReqPs, Url, Data) ->
+    gen_server:call(ReqPs, {post, Url, Data}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -83,9 +87,29 @@ init([ServerId, [Host, Port]]) ->
                          {noreply, NewState :: term(), hibernate} |
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
+handle_call({post, Url, Data}, _From, State) ->
+    logger:info("handling post to ~p", [Url]),
+    #state{con_pid=ConPid}=State,
+    ReqHeaders = [],
+    StreamRef = gun:post(ConPid, Url, ReqHeaders, Data),
+    case gun:await(ConPid, StreamRef) of
+        {response, fin, Status, _Headers} ->
+            {reply, {Status, no_data}, State};
+        {response, nofin, Status, _Headers} ->
+            {ok, Body} = gun:await_body(ConPid, StreamRef),
+            {reply, {Status, Body}, State}
+    end;
 handle_call({get, Url}, _From, State) ->
     logger:info("handling get to ~p", [Url]),
-    {reply, ok, State}.
+    #state{con_pid=ConPid}=State,
+    StreamRef = gun:get(ConPid, Url),
+    case gun:await(ConPid, StreamRef) of
+        {response, fin, Status, _Headers} ->
+            {reply, {Status, no_data}, State};
+        {response, nofin, Status, _Headers} ->
+            {ok, Body} = gun:await_body(ConPid, StreamRef),
+            {reply, {Status, Body}, State}
+    end.
 %% handle_call(_Request, _From, State) ->
 %%     Reply = ok,
 %%     {reply, Reply, State}.
