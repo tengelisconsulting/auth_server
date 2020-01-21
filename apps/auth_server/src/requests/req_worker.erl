@@ -83,7 +83,6 @@ init([ServerId, [Host, Port]]) ->
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
 handle_call({post, Url, Data}, _From, State) ->
-    logger:info("handling post to ~p", [Url]),
     #state{con_pid=ConPid}=State,
     ReqHeaders = [],
     StreamRef = gun:post(ConPid, Url, ReqHeaders, Data),
@@ -95,7 +94,6 @@ handle_call({post, Url, Data}, _From, State) ->
             {reply, {Status, Body}, State}
     end;
 handle_call({get, Url}, _From, State) ->
-    logger:info("handling get to ~p", [Url]),
     #state{con_pid=ConPid}=State,
     StreamRef = gun:get(ConPid, Url),
     case gun:await(ConPid, StreamRef) of

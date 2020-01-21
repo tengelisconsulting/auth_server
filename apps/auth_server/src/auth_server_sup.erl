@@ -26,7 +26,7 @@ start_link() ->
 %%                  type => worker(),       % optional
 %%                  modules => modules()}   % optional
 init([]) ->
-    SupFlags = #{strategy => one_for_all,
+    SupFlags = #{strategy => rest_for_one,
                  intensity => 0,
                  period => 1},
     ReqMgrSup = #{
@@ -37,22 +37,17 @@ init([]) ->
                   type => supervisor,
                   modules => [req_mgr_sup]
                  },
-    %% ReqSupChild = #{
-    %%                id => req_sup_0,
-    %%                start => {req_sup,
-    %%                          start_link,
-    %%                          [[
-    %%                            #{id => pg,
-    %%                              host => "127.0.0.1",
-    %%                              port => 5000}
-    %%                           ]]},
-    %%                 restart => permanent,
-    %%                 shutdown => 5000,
-    %%                 type => supervisor,
-    %%                 modules => [req_sup]
-    %%               },
+    PgSup = #{
+              id => pg_sup,
+              start => {pg_sup, start_link, []},
+              restart => permanent,
+              shutdown => 5000,
+              type => supervisor,
+              modules => [pg_sup]
+             },
     ChildSpecs = [
-                  ReqMgrSup
+                  ReqMgrSup,
+                  PgSup
                  ],
     {ok, {SupFlags, ChildSpecs}}.
 

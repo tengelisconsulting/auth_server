@@ -4,16 +4,17 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 20 Jan 2020 by  <liam@lummm3>
+%%% Created : 21 Jan 2020 by  <liam@lummm3>
 %%%-------------------------------------------------------------------
--module(req_mgr).
+-module(pg).
 
 -behaviour(gen_server).
 
 %% API
 -export([
          start_link/0,
-         open/3
+         get/1,
+         post/2
         ]).
 
 %% gen_server callbacks
@@ -22,14 +23,18 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {}).
+-record(state, {
+                con
+               }).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
-open(ConName, Host, Port) ->
-    gen_server:call(?SERVER, {open, ConName, Host, Port}, 10000).
+get(Url) ->
+    gen_server:call(?SERVER, {get, Url}).
 
+post(Url, Data) ->
+    gen_server:call(?SERVER, {post, Url, Data}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -60,7 +65,8 @@ start_link() ->
                               ignore.
 init([]) ->
     process_flag(trap_exit, true),
-    {ok, #state{}}.
+    {ok, _Pid} = req_mgr:open(pg_con1, "127.0.0.1", 5000),
+    {ok, #state{con=pg_con1}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -77,12 +83,22 @@ init([]) ->
                          {noreply, NewState :: term(), hibernate} |
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
-handle_call({open, ConName, Host, Port}, _From, State) ->
-    StartResult = supervisor:start_link(
-                    req_worker_sup,
-                    #{id => ConName, host => Host, port => Port}
-                   ),
-    {reply, StartResult, State}.
+handle_call({get, Url}, _From, #state{con=Con}=State) ->
+    try req_worker:get(Con, Url) of
+        {Status, Body} ->
+            {reply, {Status, Body}, State}
+    catch
+        _:Error ->
+            {reply, {500, Error}, State}
+    end;
+handle_call({post, Url, Data}, _From, #state{con=Con}=State) ->
+    try req_worker:post(Con, Url, Data) of
+        {Status, Body} ->
+            {reply, {Status, Body}, State}
+    catch
+        _:Error ->
+            {reply, {500, Error}, State}
+    end.
 
 %%--------------------------------------------------------------------
 %% @private

@@ -21,8 +21,7 @@
                 data=none}).
 
 %% cowboy
-init(Req, Opts) ->
-    [OpMod, OpFn] = Opts,
+init(Req, [OpMod, OpFn]) ->
     State = #state{op=[OpMod, OpFn]},
     {cowboy_rest, Req, State}.
 
