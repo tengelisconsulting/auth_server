@@ -4,17 +4,16 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created : 19 Jan 2020 by  <liam@lummm3>
+%%% Created : 20 Jan 2020 by  <liam@lummm3>
 %%%-------------------------------------------------------------------
--module(requests).
+-module(req_mgr).
 
 -behaviour(gen_server).
 
 %% API
 -export([
-         start_link/2,
-         get/2,
-         post/3
+         start_link/0,
+         open/3
         ]).
 
 %% gen_server callbacks
@@ -23,27 +22,26 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {
-                con_pid=undefined,
-                protocol=undefined
-               }).
+-record(state, {}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
-get(ReqPs, Url) ->
-    gen_server:call(ReqPs, {get, Url}).
+open(ConName, Host, Port) ->
+    gen_server:call(?SERVER, {open, ConName, Host, Port}).
 
-post(ReqPs, Url, Data) ->
-    gen_server:call(ReqPs, {post, Url, Data}).
 
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
 %% @end
 %%--------------------------------------------------------------------
-start_link(ServerId, [Host, Port]) ->
-    gen_server:start_link({local, ServerId}, ?MODULE, [ServerId, [Host, Port]], []).
+-spec start_link() -> {ok, Pid :: pid()} |
+                      {error, Error :: {already_started, pid()}} |
+                      {error, Error :: term()} |
+                      ignore.
+start_link() ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -60,17 +58,9 @@ start_link(ServerId, [Host, Port]) ->
                               {ok, State :: term(), hibernate} |
                               {stop, Reason :: term()} |
                               ignore.
-init([ServerId, [Host, Port]]) ->
+init([]) ->
     process_flag(trap_exit, true),
-    logger:info("req server ~p opening con at ~s:~p", [ServerId, Host, Port]),
-    case gun:open(Host, Port) of
-        {ok, ConnPid} ->
-            {ok, Protocol} = gun:await_up(ConnPid),
-            {ok, #state{con_pid=ConnPid, protocol=Protocol}};
-        {error, _} ->
-            logger:error("failed to open con ~s:~p", [Host, Port]),
-            {stop, error}
-    end.
+    {ok, #state{}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -87,32 +77,13 @@ init([ServerId, [Host, Port]]) ->
                          {noreply, NewState :: term(), hibernate} |
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
-handle_call({post, Url, Data}, _From, State) ->
-    logger:info("handling post to ~p", [Url]),
-    #state{con_pid=ConPid}=State,
-    ReqHeaders = [],
-    StreamRef = gun:post(ConPid, Url, ReqHeaders, Data),
-    case gun:await(ConPid, StreamRef) of
-        {response, fin, Status, _Headers} ->
-            {reply, {Status, no_data}, State};
-        {response, nofin, Status, _Headers} ->
-            {ok, Body} = gun:await_body(ConPid, StreamRef),
-            {reply, {Status, Body}, State}
-    end;
-handle_call({get, Url}, _From, State) ->
-    logger:info("handling get to ~p", [Url]),
-    #state{con_pid=ConPid}=State,
-    StreamRef = gun:get(ConPid, Url),
-    case gun:await(ConPid, StreamRef) of
-        {response, fin, Status, _Headers} ->
-            {reply, {Status, no_data}, State};
-        {response, nofin, Status, _Headers} ->
-            {ok, Body} = gun:await_body(ConPid, StreamRef),
-            {reply, {Status, Body}, State}
-    end.
-%% handle_call(_Request, _From, State) ->
-%%     Reply = ok,
-%%     {reply, Reply, State}.
+handle_call({open, ConName, Host, Port}, _From, State) ->
+    %% if a connection isn't made in 5 seconds, this times out...
+    StartResult = supervisor:start_link(
+                    req_worker_sup,
+                    #{id => ConName, host => Host, port => Port}
+                   ),
+    {reply, StartResult, State}.
 
 %%--------------------------------------------------------------------
 %% @private
