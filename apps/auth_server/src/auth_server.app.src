@@ -8,7 +8,8 @@
     stdlib,
     cowboy,
     jsone,
-    gun
+    gun,
+    mnesia
    ]},
   {env,[]},
   {modules, []},

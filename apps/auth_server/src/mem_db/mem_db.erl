@@ -6,16 +6,15 @@
 %%% @end
 %%% Created : 21 Jan 2020 by  <liam@lummm3>
 %%%-------------------------------------------------------------------
--module(pg).
+-module(mem_db).
 
 -behaviour(gen_server).
 
 %% API
 -export([
-         start_link/2,
-         get/1,
-         post/2,
-         get_all_users_permissions/0
+         start_link/0,
+         users_permissions/1,
+         check_permission/2
         ]).
 
 %% gen_server callbacks
@@ -24,29 +23,33 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {
-                con
-               }).
+-record(state, {}).
+
+-record(session_data, {
+                       id,
+                       permissions
+                      }).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
-get_all_users_permissions() ->
-    gen_server:call(?SERVER, {get, "/user_permission_list"}).
+users_permissions(UserId) ->
+    gen_server:call(?SERVER, {users_permissions, UserId}).
 
-get(Url) ->
-    gen_server:call(?SERVER, {get, Url}).
-
-post(Url, Data) ->
-    gen_server:call(?SERVER, {post, Url, Data}).
+check_permission(UserId, Permission) ->
+    gen_server:call(?SERVER, {check_permission, UserId, Permission}).
 
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
 %% @end
 %%--------------------------------------------------------------------
-start_link(Host, Port) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Host, Port], []).
+-spec start_link() -> {ok, Pid :: pid()} |
+                      {error, Error :: {already_started, pid()}} |
+                      {error, Error :: term()} |
+                      ignore.
+start_link() ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -63,10 +66,10 @@ start_link(Host, Port) ->
                               {ok, State :: term(), hibernate} |
                               {stop, Reason :: term()} |
                               ignore.
-init([Host, Port]) ->
+init([]) ->
     process_flag(trap_exit, true),
-    {ok, _Pid} = req_mgr:open(pg_con1, Host, Port),
-    {ok, #state{con=pg_con1}}.
+    load_permission_data(),
+    {ok, #state{}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -83,22 +86,13 @@ init([Host, Port]) ->
                          {noreply, NewState :: term(), hibernate} |
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
-handle_call({get, Url}, _From, #state{con=Con}=State) ->
-    try req_worker:get(Con, Url) of
-        {Status, Body} ->
-            {reply, {Status, Body}, State}
-    catch
-        _:Error ->
-            {reply, {500, Error}, State}
-    end;
-handle_call({post, Url, Data}, _From, #state{con=Con}=State) ->
-    try req_worker:post(Con, Url, Data) of
-        {Status, Body} ->
-            {reply, {Status, Body}, State}
-    catch
-        _:Error ->
-            {reply, {500, Error}, State}
-    end.
+handle_call({users_permissions, UserId}, _From, State) ->
+    {reply, get_users_permissions(UserId), State};
+handle_call({check_permission, UserId, Permission}, _From, State) ->
+    Permissions = get_users_permissions(UserId),
+    Response = lists:member(Permission, Permissions),
+    {reply, Response, State}.
+
 
 %%--------------------------------------------------------------------
 %% @private
@@ -171,3 +165,38 @@ format_status(_Opt, Status) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+load_permission_data() ->
+    {200, AsStr} = pg:get_all_users_permissions(),
+    Data = jsone:decode(AsStr),
+    mnesia:create_table(session_data,
+                        [{attributes, record_info(fields, session_data)},
+                         {ram_copies, [node()]}]),
+    mnesia:clear_table(session_data),
+    lists:foreach(fun insert_record/1, Data).
+
+insert_record(
+  #{<<"user_id">> := UserId,
+    <<"permissions">> := Permissions
+   }
+ ) ->
+    Write = fun() ->
+                    mnesia:write(
+                      #session_data{
+                         id = UserId,
+                         permissions = Permissions
+                        }
+                     )
+            end,
+    mnesia:activity(transaction, Write).
+
+get_users_permissions(UserId) ->
+    FindMatch = fun() ->
+                        mnesia:read({session_data, UserId})
+                end,
+    Rows = mnesia:activity(transaction, FindMatch),
+    case Rows of
+        [] ->
+            [];
+        [#session_data{permissions=Permissions}] ->
+            Permissions
+    end.
