@@ -12,7 +12,6 @@
 
 %% handler fns
 -export([
-         say_hi/1, say_hi/2,
          check_permission/1, check_permission/2,
          create_account/1, create_account/2,
          auth_username_password/1, auth_username_password/2
@@ -67,12 +66,6 @@ handle(Req0, #state{op=[Mod, Fn]} = State0) ->
 
 
 %% API
-say_hi(allowed_methods) -> [<<"GET">>].
-say_hi(Req0, State0) ->
-    Success = true,
-    Response = <<"Hello get">>,
-    {Success, Response, Req0, State0}.
-
 create_account(allowed_methods) -> [<<"PUT">>].
 create_account(Req0, State0) ->
     Success = true,
@@ -97,6 +90,6 @@ auth_username_password(Req0, #state{data=Data} = State0) ->
                 ),
     case jsone:decode(AuthResponse) of
         <<"">> ->
-            {true, <<"">>, Req0, State0};
+            {halt, <<"">>, cowboy_req:reply(401, Req0), State0};
         UserId -> {true, UserId, Req0, State0}
     end.
