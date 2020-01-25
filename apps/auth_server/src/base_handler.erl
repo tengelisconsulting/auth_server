@@ -91,5 +91,10 @@ auth_username_password(Req0, #state{data=Data} = State0) ->
     case jsone:decode(AuthResponse) of
         <<"">> ->
             {halt, <<"">>, cowboy_req:reply(401, Req0), State0};
-        UserId -> {true, UserId, Req0, State0}
+        UserId ->
+            {ok, Token} = token:from_user_id(UserId),
+            Req = cowboy_req:set_resp_cookie(
+                     <<"auth_token">>, Token, Req0
+                   ),
+            {true, UserId, Req, State0}
     end.
