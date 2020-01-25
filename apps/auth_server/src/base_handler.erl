@@ -74,9 +74,14 @@ create_account(Req0, State0) ->
 
 check_permission(allowed_methods) -> [<<"GET">>].
 check_permission(Req0, State0) ->
-    Success = true,
-    Response = mem_db:check_permission(<<"1">>, <<"false_permission">>),
-    {Success, Response, Req0, State0}.
+    case get_user_id(Req0) of
+        {ok, UserId} ->
+            Response = mem_db:check_permission(UserId, <<"false_permission">>),
+            {true, Response, Req0, State0};
+        _ ->
+            {halt, <<"unauthorized">>,
+             cowboy_req:reply(401, Req0), State0}
+    end.
 
 auth_username_password(allowed_methods) -> [<<"POST">>].
 auth_username_password(Req0, #state{data=Data} = State0) ->
@@ -96,5 +101,15 @@ auth_username_password(Req0, #state{data=Data} = State0) ->
             Req = cowboy_req:set_resp_cookie(
                      <<"auth_token">>, Token, Req0
                    ),
-            {true, UserId, Req, State0}
+            {true, Token, Req, State0}
+    end.
+
+%% Internal
+get_user_id(Req) ->
+    AuthHeader = cowboy_req:header(<<"authorization">>, Req, <<"">>),
+    logger:info("auth header: ~p", [AuthHeader]),
+    case binary:split(AuthHeader, <<"Bearer ">>) of
+        [<<>>, AuthToken] ->
+            token:to_user_id(AuthToken);
+        _ -> {error, no_auth_header}
     end.

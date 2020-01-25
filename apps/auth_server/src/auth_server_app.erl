@@ -33,6 +33,8 @@ routes() ->
      {"/test", base_handler,
       [base_handler, say_hi]
      },
+     {"/permission/check", base_handler,
+      [base_handler, check_permission]},
      {"/authenticate/username-password", base_handler,
       [base_handler, auth_username_password]},
      {"/account/create", base_handler,
