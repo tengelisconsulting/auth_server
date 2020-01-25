@@ -12,7 +12,7 @@
 
 %% API
 -export([
-         start_link/1,
+         start_link/2,
          from_user_id/1,
          to_user_id/1
         ]).
@@ -24,7 +24,8 @@
 -define(SERVER, ?MODULE).
 
 -record(state, {
-                priv_key
+                priv_key,
+                session_s
                }).
 
 %%%===================================================================
@@ -41,8 +42,9 @@ to_user_id(Token) ->
 %% Starts the server
 %% @end
 %%--------------------------------------------------------------------
-start_link(PrivKeyFile) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [PrivKeyFile], []).
+start_link(PrivKeyFile, SessionS) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE,
+                          [PrivKeyFile, SessionS], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -59,11 +61,14 @@ start_link(PrivKeyFile) ->
                               {ok, State :: term(), hibernate} |
                               {stop, Reason :: term()} |
                               ignore.
-init([PrivKeyFile]) ->
+init([PrivKeyFile, SessionS]) ->
     process_flag(trap_exit, true),
     {ok, PrivKey} = file:read_file(PrivKeyFile),
     _PrivKeyLines = binary:split(PrivKey, [<<"\n">>], [global]),
-    {ok, #state{priv_key=PrivKey}}.
+    {ok, #state{
+            priv_key=PrivKey,
+            session_s=SessionS
+           }}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -81,16 +86,21 @@ init([PrivKeyFile]) ->
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
 handle_call({to_user_id, Token}, _From, #state{priv_key=PrivKey} = State) ->
-    {ok, Claims} = jwt:decode(Token, PrivKey),
-    #{<<"user_id">> := UserId} = Claims,
-    {reply, UserId, State};
-handle_call({from_user_id, UserId},
-            _From, #state{priv_key=PrivKey} = State) ->
+    case jwt:decode(Token, PrivKey) of
+        {ok, Claims} ->
+            #{<<"user_id">> := UserId} = Claims,
+            {reply, {ok, UserId}, State};
+        NoLuck ->
+            {reply, NoLuck, State}
+    end;
+handle_call({from_user_id, UserId}, _From,
+            #state{priv_key=PrivKey,
+                   session_s=SessionS} = State) ->
     Claims = [
               {<<"user_id">>, UserId}
              ],
-    {ok, Token} = jwt:encode(<<"HS256">>, Claims, PrivKey),
-    {reply, Token, State}.
+    Response = jwt:encode(<<"HS256">>, Claims, SessionS, PrivKey),
+    {reply, Response, State}.
 
 %%--------------------------------------------------------------------
 %% @private

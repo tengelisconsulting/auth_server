@@ -45,13 +45,14 @@ start_link(Args) ->
 %%--------------------------------------------------------------------
 init([Args]) ->
     #{
-      priv_key_file := PrivKeyFile
+      priv_key_file := PrivKeyFile,
+      session_s := SessionS
      } = Args,
     SupFlags = #{strategy => one_for_one,
                  intensity => 1,
                  period => 5},
     Token = #{id => token,
-               start => {token, start_link, [PrivKeyFile]},
+               start => {token, start_link, [PrivKeyFile, SessionS]},
                restart => permanent,
                shutdown => 5000,
                type => worker,
