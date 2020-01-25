@@ -1,4 +1,6 @@
-[{<<"cowboy">>,
+{"1.1.0",
+[{<<"base64url">>,{pkg,<<"base64url">>,<<"0.0.1">>},1},
+ {<<"cowboy">>,
   {git,"https://github.com/ninenines/cowboy.git",
        {ref,"edea415da87d7f6fe9f4fcd4306ce3e7e38727ed"}},
   0},
@@ -14,7 +16,17 @@
   {git,"https://github.com/sile/jsone.git",
        {ref,"2ebbe2361d19af3cc4c94b7345972710aec4fbda"}},
   0},
+ {<<"jsx">>,{pkg,<<"jsx">>,<<"2.8.0">>},1},
+ {<<"jwt">>,
+  {git,"https://github.com/artemeff/jwt.git",
+       {ref,"4ccacb87ac99e781dc367b4e6ce18f383951b3e4"}},
+  0},
  {<<"ranch">>,
   {git,"https://github.com/ninenines/ranch",
        {ref,"3190aef88aea04d6dce8545fe9b4574288903f44"}},
-  1}].
+  1}]}.
+[
+{pkg_hash,[
+ {<<"base64url">>, <<"36A90125F5948E3AFD7BE97662A1504B934DD5DAC78451CA6E9ABF85A10286BE">>},
+ {<<"jsx">>, <<"749BEC6D205C694AE1786D62CEA6CC45A390437E24835FD16D12D74F07097727">>}]}
+].

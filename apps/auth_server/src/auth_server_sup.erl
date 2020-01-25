@@ -53,9 +53,18 @@ init([RuntimeArgs]) ->
                  type => supervisor,
                  modules => [mem_db_sup]
                 },
+    TokenSup = #{
+                 id => token_sup,
+                 start => {token_sup, start_link, [RuntimeArgs]},
+                 restart => permanent,
+                 shutdown => 5000,
+                 type => supervisor,
+                 modules => [token_sup]
+                },
     ChildSpecs = [
                   ReqMgrSup,
                   PgSup,
+                  TokenSup,
                   MemDbSup
                  ],
     {ok, {SupFlags, ChildSpecs}}.

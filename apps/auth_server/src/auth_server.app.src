@@ -9,6 +9,7 @@
     cowboy,
     jsone,
     gun,
+    jwt,
     mnesia
    ]},
   {env,[]},
