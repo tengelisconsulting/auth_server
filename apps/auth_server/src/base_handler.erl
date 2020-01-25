@@ -74,9 +74,10 @@ create_account(Req0, State0) ->
 
 check_permission(allowed_methods) -> [<<"GET">>].
 check_permission(Req0, State0) ->
+    #{code := PermissionCode} = cowboy_req:match_qs([code], Req0),
     case get_user_id(Req0) of
         {ok, UserId} ->
-            Response = mem_db:check_permission(UserId, <<"false_permission">>),
+            Response = mem_db:check_permission(UserId, PermissionCode),
             {true, Response, Req0, State0};
         _ ->
             {halt, <<"unauthorized">>,
@@ -107,7 +108,6 @@ auth_username_password(Req0, #state{data=Data} = State0) ->
 %% Internal
 get_user_id(Req) ->
     AuthHeader = cowboy_req:header(<<"authorization">>, Req, <<"">>),
-    logger:info("auth header: ~p", [AuthHeader]),
     case binary:split(AuthHeader, <<"Bearer ">>) of
         [<<>>, AuthToken] ->
             token:to_user_id(AuthToken);
