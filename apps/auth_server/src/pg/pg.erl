@@ -15,7 +15,8 @@
          start_link/2,
          get/1,
          post/2,
-         get_all_users_permissions/0
+         get_all_users_permissions/0,
+         check_username_password/2
         ]).
 
 %% gen_server callbacks
@@ -33,6 +34,11 @@
 %%%===================================================================
 get_all_users_permissions() ->
     gen_server:call(?SERVER, {get, "/user_permission_list"}).
+
+check_username_password(Username, Password) ->
+    Url = "/rpc/check_username_password?p_username="
+        ++ Username ++ "&p_password=" ++ Password,
+    gen_server:call(?SERVER, {get, Url}).
 
 get(Url) ->
     gen_server:call(?SERVER, {get, Url}).

@@ -13,7 +13,9 @@
 %% handler fns
 -export([
          say_hi/1, say_hi/2,
-         create_account/1, create_account/2
+         check_permission/1, check_permission/2,
+         create_account/1, create_account/2,
+         auth_username_password/1, auth_username_password/2
         ]).
 
 
@@ -76,3 +78,25 @@ create_account(Req0, State0) ->
     Success = true,
     Response = <<"creating user...">>,
     {Success, Response, Req0, State0}.
+
+check_permission(allowed_methods) -> [<<"GET">>].
+check_permission(Req0, State0) ->
+    Success = true,
+    Response = mem_db:check_permission(<<"1">>, <<"false_permission">>),
+    {Success, Response, Req0, State0}.
+
+auth_username_password(allowed_methods) -> [<<"POST">>].
+auth_username_password(Req0, #state{data=Data} = State0) ->
+    #{
+      <<"username">> := Username,
+      <<"password">> := Password
+     } = Data,
+    {200, AuthResponse} = pg:check_username_password(
+                 binary_to_list(Username),
+                 binary_to_list(Password)
+                ),
+    case jsone:decode(AuthResponse) of
+        <<"">> ->
+            {true, <<"">>, Req0, State0};
+        UserId -> {true, UserId, Req0, State0}
+    end.
