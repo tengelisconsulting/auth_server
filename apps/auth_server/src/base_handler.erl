@@ -67,10 +67,22 @@ handle(Req0, #state{op=[Mod, Fn]} = State0) ->
 
 %% API
 create_account(allowed_methods) -> [<<"PUT">>].
-create_account(Req0, State0) ->
-    Success = true,
-    Response = <<"creating user...">>,
-    {Success, Response, Req0, State0}.
+create_account(Req0, #state{data=Data}=State0) ->
+    #{
+      <<"username">> := Username,
+      <<"password">> := Password
+     } = Data,
+    case pg:init_user(Username, Password) of
+        {200, UserId} ->
+            {true, UserId, Req0, State0};
+        {Status, Details} ->
+            Req1 = cowboy_req:set_resp_body(
+                     jsone:encode(Details), Req0
+                    ),
+            {halt, Details,
+             cowboy_req:reply(Status, Req1),
+             State0}
+    end.
 
 check_permission(allowed_methods) -> [<<"GET">>].
 check_permission(Req0, State0) ->
@@ -94,7 +106,7 @@ auth_username_password(Req0, #state{data=Data} = State0) ->
                  binary_to_list(Username),
                  binary_to_list(Password)
                 ),
-    case jsone:decode(AuthResponse) of
+    case AuthResponse of
         <<"">> ->
             {halt, <<"">>, cowboy_req:reply(401, Req0), State0};
         UserId ->

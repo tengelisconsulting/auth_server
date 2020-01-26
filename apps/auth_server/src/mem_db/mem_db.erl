@@ -166,8 +166,7 @@ format_status(_Opt, Status) ->
 %%% Internal functions
 %%%===================================================================
 load_permission_data() ->
-    {200, AsStr} = pg:get_all_users_permissions(),
-    Data = jsone:decode(AsStr),
+    {200, Data} = pg:get_all_users_permissions(),
     mnesia:create_table(session_data,
                         [{attributes, record_info(fields, session_data)},
                          {ram_copies, [node()]}]),

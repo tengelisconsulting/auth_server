@@ -102,7 +102,7 @@ init([Host, Port]) ->
 handle_call({get, Url}, _From, #state{con=Con}=State) ->
     try req_worker:get(Con, Url) of
         {Status, Body} ->
-            {reply, {Status, Body}, State}
+            {reply, {Status, jsone:decode(Body)}, State}
     catch
         _:Error ->
             {reply, {500, Error}, State}
@@ -111,7 +111,7 @@ handle_call({post, Url, Data}, _From, #state{con=Con}=State) ->
     ReqBody = jsone:encode(Data),
     try req_worker:post(Con, Url, ReqBody) of
         {Status, Body} ->
-            {reply, {Status, Body}, State}
+            {reply, {Status, jsone:decode(Body)}, State}
     catch
         _:Error ->
             {reply, {500, Error}, State}
