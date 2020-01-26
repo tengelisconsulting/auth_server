@@ -1,0 +1,26 @@
+version: "3.4"
+services:
+
+  dev_db:
+    image: postgres:12.0-alpine
+    network_mode: "host"
+    environment:
+      - PGHOST
+      - PGUSER
+      - PGPASSWORD
+
+  postgrest:
+    image: tengelisconsulting/karma_postgrest:latest
+    network_mode: "host"
+    volumes:
+      - ./_data:/var/lib/postgresql/data
+    environment:
+      - PGHOST
+      - PGPORT
+      - API_PG_USER
+      - API_PG_PASSWORD
+      - API_DB_SCHEMA
+      - API_ANON_ROLE
+      - API_DB_POOL
+      - API_DB_POOL_TIMEOUT
+      - API_DB_PORT
