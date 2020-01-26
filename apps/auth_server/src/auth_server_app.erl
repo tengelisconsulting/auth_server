@@ -35,5 +35,7 @@ routes() ->
      {"/authenticate/username-password", base_handler,
       [base_handler, auth_username_password]},
      {"/account/create", base_handler,
-      [base_handler, create_account]}
+      [base_handler, create_account]},
+     {"/session/user-id", base_handler,
+      [base_handler, user_id]}
     ].

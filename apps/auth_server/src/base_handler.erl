@@ -12,6 +12,7 @@
 
 %% handler fns
 -export([
+         user_id/1, user_id/2,
          check_permission/1, check_permission/2,
          create_account/1, create_account/2,
          auth_username_password/1, auth_username_password/2
@@ -66,7 +67,7 @@ handle(Req0, #state{op=[Mod, Fn]} = State0) ->
 
 
 %% API
-create_account(allowed_methods) -> [<<"PUT">>].
+create_account(allowed_methods) -> [<<"POST">>].
 create_account(Req0, #state{data=Data}=State0) ->
     #{
       <<"username">> := Username,
@@ -115,6 +116,16 @@ auth_username_password(Req0, #state{data=Data} = State0) ->
                      <<"auth_token">>, Token, Req0
                    ),
             {true, Token, Req, State0}
+    end.
+
+user_id(allowed_methods) -> [<<"GET">>].
+user_id(Req0, State0) ->
+    case get_user_id(Req0) of
+        {ok, UserId} ->
+            {true, UserId, Req0, State0};
+        _ ->
+            {false, <<"">>,
+             cowboy_req:reply(401, Req0), State0}
     end.
 
 %% Internal
