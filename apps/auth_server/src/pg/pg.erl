@@ -16,6 +16,7 @@
          get/1,
          post/2,
          get_all_users_permissions/0,
+         init_user/2,
          check_username_password/2
         ]).
 
@@ -32,6 +33,15 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
+init_user(Username, Password) ->
+    Url = "/rpc/ac_init_user",
+    Data = #{
+             <<"p_username">> => Username,
+             <<"p_password">> => Password,
+             <<"p_role_names">> => [<<"BASE_USER">>]
+            },
+    gen_server:call(?SERVER, {post, Url, Data}).
+
 get_all_users_permissions() ->
     gen_server:call(?SERVER, {get, "/user_permission_list"}).
 
@@ -98,7 +108,8 @@ handle_call({get, Url}, _From, #state{con=Con}=State) ->
             {reply, {500, Error}, State}
     end;
 handle_call({post, Url, Data}, _From, #state{con=Con}=State) ->
-    try req_worker:post(Con, Url, Data) of
+    ReqBody = jsone:encode(Data),
+    try req_worker:post(Con, Url, ReqBody) of
         {Status, Body} ->
             {reply, {Status, Body}, State}
     catch
