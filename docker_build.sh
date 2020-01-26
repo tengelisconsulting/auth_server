@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker build -t tengelisconsulting/karma_auth_server:dev .
+docker build -t tengelisconsulting/auth_server:dev .

@@ -1,6 +1,15 @@
 version: "3.4"
 services:
 
+  auth_server:
+    image: tengelisconsulting/auth_server:latest
+    network_mode: "host"
+    volumes:
+      - ${PRIV_KEY_FILE}:/app/priv_key
+    environment:
+      - API_DB_PORT
+      - AUTH_HTTP_PORT
+
   dev_db:
     image: postgres:12.0-alpine
     network_mode: "host"

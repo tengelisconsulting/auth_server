@@ -50,13 +50,13 @@ start_link(Args) ->
 init([Args]) ->
     #{
       db_api_host:=Host,
-      db_api_port:=Port
+      db_api_port:=PortStr
      } = Args,
     SupFlags = #{strategy => one_for_one,
                  intensity => 1,
                  period => 5},
     Pg = #{id => pg,
-               start => {pg, start_link, [Host, Port]},
+               start => {pg, start_link, [Host, list_to_integer(PortStr)]},
                restart => permanent,
                shutdown => 5000,
                type => worker,

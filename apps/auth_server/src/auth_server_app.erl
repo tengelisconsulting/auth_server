@@ -12,15 +12,15 @@
 start(_StartType, _StartArgs) ->
     {ok, RuntimeArgs} = application:get_env(auth_server, runtime_args),
     #{
-      listen_port := ListenPort
+      listen_port := ListenPortStr
      } = RuntimeArgs,
     Dispatch = cowboy_router:compile([
                                       {'_',
                                        routes()}
                                      ]),
-    logger:info("starting listener on ~p", [ListenPort]),
+    logger:info("starting listener on ~p", [ListenPortStr]),
     {ok, _} = cowboy:start_clear(auth_http_listener,
-                                 [{port, ListenPort}],
+                                 [{port, list_to_integer(ListenPortStr)}],
                                  #{env => #{dispatch => Dispatch}}),
     auth_server_sup:start_link(RuntimeArgs).
 
