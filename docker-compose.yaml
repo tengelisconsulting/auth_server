@@ -7,10 +7,11 @@ services:
     volumes:
       - ${PRIV_KEY_FILE}:/app/priv_key
     environment:
+      - API_DB_HOST
       - API_DB_PORT
       - AUTH_HTTP_PORT
 
-  dev_db:
+  db:
     image: postgres:12.0-alpine
     network_mode: "host"
     environment:
