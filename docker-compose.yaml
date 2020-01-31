@@ -5,25 +5,44 @@ services:
     image: tengelisconsulting/auth_server:latest
     network_mode: "host"
     volumes:
+      - "/etc/localtime:/etc/localtime:ro"
       - ${PRIV_KEY_FILE}:/app/priv_key
     environment:
+      - SERVER_TYPE="auth_server"
       - API_DB_HOST
       - API_DB_PORT
-      - AUTH_HTTP_PORT
+      - AUTH_HOST
+      - AUTH_PORT
+
+  api_server:
+    image: tengelisconsulting/auth_server:latest
+    network_mode: "host"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - ${PRIV_KEY_FILE}:/app/priv_key
+    environment:
+      - SERVER_TYPE="api_server"
+      - API_DB_HOST
+      - API_DB_PORT
+      - AUTH_HOST
+      - AUTH_PORT
+      - API_PORT
 
   db:
     image: postgres:12.0-alpine
     network_mode: "host"
     environment:
-      - PGHOST
-      - PGUSER
-      - PGPASSWORD
+      - POSTGRES_USER=${PGUSER}
+      - POSTGRES_PASSWORD=${PGPASSWORD}
+    volumes:
+      - ./_data:/var/lib/postgresql/data
+      - "/etc/localtime:/etc/localtime:ro"
 
   postgrest:
     image: tengelisconsulting/karma_postgrest:latest
     network_mode: "host"
     volumes:
-      - ./_data:/var/lib/postgresql/data
+      - "/etc/localtime:/etc/localtime:ro"
     environment:
       - PGHOST
       - PGPORT

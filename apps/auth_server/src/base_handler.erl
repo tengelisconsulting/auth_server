@@ -12,6 +12,7 @@
 
 %% handler fns
 -export([
+         api_request/1, api_request/2,
          user_id/1, user_id/2,
          check_permission/1, check_permission/2,
          create_account/1, create_account/2,
@@ -127,6 +128,11 @@ user_id(Req0, State0) ->
             {false, <<"">>,
              cowboy_req:reply(401, Req0), State0}
     end.
+
+api_request(allowed_methods) -> [<<"GET">>, <<"POST">>, <<"PUT">>].
+api_request(Req0, State0) ->
+    {true, <<"hi">>, Req0, State0}.
+
 
 %% Internal
 get_user_id(Req) ->

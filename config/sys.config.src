@@ -5,13 +5,30 @@
     [{handler, default, logger_std_h,
       #{ level => info }}
     ]}]},
+ {server_type,
+  [
+   {runtime_args, #{
+                    server_type => "${SERVER_TYPE}"
+                   }}
+  ]},
+
+ {api_server,
+  [
+   {runtime_args, #{
+                    auth_host => "${AUTH_HOST}",
+                    listen_port => "${API_PORT}",
+                    db_api_port => "${API_DB_PORT}",
+                    db_api_host => "${API_DB_HOST}"
+                   }}
+  ]},
 
   {auth_server,
    [
     {runtime_args, #{
                      session_s => 3600,
+                     api_port => "${API_PORT}",
                      priv_key_file => "/app/priv_key",
-                     listen_port => "${AUTH_HTTP_PORT}",
+                     listen_port => "${AUTH_PORT}",
                      db_api_port => "${API_DB_PORT}",
                      db_api_host => "${API_DB_HOST}"
                     }}
