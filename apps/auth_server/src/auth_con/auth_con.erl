@@ -11,7 +11,10 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2]).
+-export([
+         start_link/2,
+         get_session_user_id/1
+        ]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -26,6 +29,9 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
+get_session_user_id(Headers) ->
+    Url = "/session/user-id",
+    gen_server:call(?SERVER, {get, Url, Headers}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -56,7 +62,6 @@ start_link(Host, Port) ->
                               ignore.
 init([Host, Port]) ->
     process_flag(trap_exit, true),
-    {ok, _Pid} = req_mgr:open(auth_con1, Host, Port),
     ConName = auth_con1,
     {ok, _Pid} = req_mgr:open(ConName, Host, Port),
     {ok, #state{con=ConName}}.
@@ -76,9 +81,14 @@ init([Host, Port]) ->
                          {noreply, NewState :: term(), hibernate} |
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
-handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+handle_call({get, Url, Headers}, _From, #state{con=Con}=State) ->
+    try req_worker:get(Con, Url, Headers) of
+        {Status, Body} ->
+            {reply, {Status, jsone:decode(Body)}, State}
+    catch
+        _:Error ->
+            {reply, {500, Error}, State}
+    end.
 
 %%--------------------------------------------------------------------
 %% @private

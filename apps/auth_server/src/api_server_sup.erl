@@ -72,9 +72,18 @@ init([RuntimeArgs]) ->
               type => supervisor,
               modules => [pg_sup]
              },
+    AuthSup = #{
+              id => auth_con_sup,
+              start => {auth_con_sup, start_link, [RuntimeArgs]},
+              restart => permanent,
+              shutdown => 5000,
+              type => supervisor,
+              modules => [auth_con_sup]
+             },
     {ok, {SupFlags, [
                      ReqMgrSup,
-                     PgSup
+                     PgSup,
+                     AuthSup
                     ]}}.
 
 %%%===================================================================

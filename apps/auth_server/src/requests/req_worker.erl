@@ -13,7 +13,7 @@
 %% API
 -export([
          start_link/2,
-         get/2,
+         get/2, get/3,
          post/3
         ]).
 
@@ -33,6 +33,8 @@
 %%%===================================================================
 get(ReqPs, Url) ->
     gen_server:call(ReqPs, {get, Url}).
+get(ReqPs, Url, Headers) ->
+    gen_server:call(ReqPs, {get, Url, Headers}).
 
 post(ReqPs, Url, Data) ->
     gen_server:call(ReqPs, {post, Url, Data}).
@@ -93,9 +95,11 @@ handle_call({post, Url, Data}, _From, State) ->
             {ok, Body} = gun:await_body(ConPid, StreamRef),
             {reply, {Status, Body}, State}
     end;
-handle_call({get, Url}, _From, State) ->
+handle_call({get, Url}, From, State) ->
+    handle_call({get, Url, []}, From, State);
+handle_call({get, Url, Headers}, _From, State) ->
     #state{con_pid=ConPid}=State,
-    StreamRef = gun:get(ConPid, Url),
+    StreamRef = gun:get(ConPid, Url, Headers),
     case gun:await(ConPid, StreamRef) of
         {response, fin, Status, _Headers} ->
             {reply, {Status, no_data}, State};
@@ -103,6 +107,7 @@ handle_call({get, Url}, _From, State) ->
             {ok, Body} = gun:await_body(ConPid, StreamRef),
             {reply, {Status, Body}, State}
     end.
+
 %% handle_call(_Request, _From, State) ->
 %%     Reply = ok,
 %%     {reply, Reply, State}.

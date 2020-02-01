@@ -131,7 +131,8 @@ user_id(Req0, State0) ->
 
 api_request(allowed_methods) -> [<<"GET">>, <<"POST">>, <<"PUT">>].
 api_request(Req0, State0) ->
-    
+    Headers = cowboy_req:headers(Req0),
+    logger:info("headers: ~p", [Headers]),
     {true, <<"hi">>, Req0, State0}.
 
 

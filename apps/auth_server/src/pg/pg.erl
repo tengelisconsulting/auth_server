@@ -26,7 +26,9 @@
 
 -define(SERVER, ?MODULE).
 
-%% in the future, there could be multiple connections for redundancy, performance
+%% in the future, there could be multiple connections for redundancy, performance.
+%% also, this should be a generic 'con' server with a 'get', 'post' interface
+%% , where the API is just a group of functions calling these gets/posts
 -record(state, {
                 con
                }).
