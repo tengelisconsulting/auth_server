@@ -26,6 +26,7 @@
 
 -define(SERVER, ?MODULE).
 
+%% in the future, there could be multiple connections for redundancy, performance
 -record(state, {
                 con
                }).
@@ -81,8 +82,9 @@ start_link(Host, Port) ->
                               ignore.
 init([Host, Port]) ->
     process_flag(trap_exit, true),
-    {ok, _Pid} = req_mgr:open(pg_con1, Host, Port),
-    {ok, #state{con=pg_con1}}.
+    ConName = pg_con1,
+    {ok, _Pid} = req_mgr:open(ConName, Host, Port),
+    {ok, #state{con=ConName}}.
 
 %%--------------------------------------------------------------------
 %% @private

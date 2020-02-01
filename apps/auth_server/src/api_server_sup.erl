@@ -72,16 +72,9 @@ init([RuntimeArgs]) ->
               type => supervisor,
               modules => [pg_sup]
              },
-    ProxySup = #{id => proxy_sup,
-                 start => {proxy_sup, start_link, []},
-                 restart => permanent,
-                 shutdown => 5000,
-                 type => worker,
-                 modules => [proxy_sup]},
     {ok, {SupFlags, [
                      ReqMgrSup,
-                     PgSup,
-                     ProxySup
+                     PgSup
                     ]}}.
 
 %%%===================================================================

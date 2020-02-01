@@ -131,11 +131,14 @@ user_id(Req0, State0) ->
 
 api_request(allowed_methods) -> [<<"GET">>, <<"POST">>, <<"PUT">>].
 api_request(Req0, State0) ->
+    
     {true, <<"hi">>, Req0, State0}.
 
 
 %% Internal
 get_user_id(Req) ->
+    %% you need to reorganize this, because it is tempting to call this
+    %% function from the api_server, but 'token' will not be running there
     AuthHeader = cowboy_req:header(<<"authorization">>, Req, <<"">>),
     case binary:split(AuthHeader, <<"Bearer ">>) of
         [<<>>, AuthToken] ->

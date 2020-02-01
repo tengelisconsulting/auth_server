@@ -1,17 +1,17 @@
 %%%-------------------------------------------------------------------
 %%% @author  <liam@lummm3>
-%%% @copyright (C) 2020, 
+%%% @copyright (C) 2020,
 %%% @doc
 %%%
 %%% @end
 %%% Created : 30 Jan 2020 by  <liam@lummm3>
 %%%-------------------------------------------------------------------
--module(proxy).
+-module(auth_con).
 
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -19,7 +19,9 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {}).
+-record(state, {
+                con
+               }).
 
 %%%===================================================================
 %%% API
@@ -30,12 +32,12 @@
 %% Starts the server
 %% @end
 %%--------------------------------------------------------------------
--spec start_link() -> {ok, Pid :: pid()} |
-                      {error, Error :: {already_started, pid()}} |
-                      {error, Error :: term()} |
-                      ignore.
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+%% -spec start_link() -> {ok, Pid :: pid()} |
+%%                       {error, Error :: {already_started, pid()}} |
+%%                       {error, Error :: term()} |
+%%                       ignore.
+start_link(Host, Port) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Host, Port], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -52,9 +54,12 @@ start_link() ->
                               {ok, State :: term(), hibernate} |
                               {stop, Reason :: term()} |
                               ignore.
-init([]) ->
+init([Host, Port]) ->
     process_flag(trap_exit, true),
-    {ok, #state{}}.
+    {ok, _Pid} = req_mgr:open(auth_con1, Host, Port),
+    ConName = auth_con1,
+    {ok, _Pid} = req_mgr:open(ConName, Host, Port),
+    {ok, #state{con=ConName}}.
 
 %%--------------------------------------------------------------------
 %% @private

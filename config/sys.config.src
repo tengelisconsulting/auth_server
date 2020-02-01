@@ -16,6 +16,7 @@
   [
    {runtime_args, #{
                     auth_host => "${AUTH_HOST}",
+                    auth_port => "${AUTH_PORT}",
                     listen_port => "${API_PORT}",
                     db_api_port => "${API_DB_PORT}",
                     db_api_host => "${API_DB_HOST}"

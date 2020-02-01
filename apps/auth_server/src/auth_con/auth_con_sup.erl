@@ -6,12 +6,12 @@
 %%% @end
 %%% Created : 30 Jan 2020 by  <liam@lummm3>
 %%%-------------------------------------------------------------------
--module(proxy_sup).
+-module(auth_con_sup).
 
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -27,13 +27,13 @@
 %% Starts the supervisor
 %% @end
 %%--------------------------------------------------------------------
--spec start_link() -> {ok, Pid :: pid()} |
-                      {error, {already_started, Pid :: pid()}} |
-                      {error, {shutdown, term()}} |
-                      {error, term()} |
-                      ignore.
-start_link() ->
-    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
+%% -spec start_link() -> {ok, Pid :: pid()} |
+%%                       {error, {already_started, Pid :: pid()}} |
+%%                       {error, {shutdown, term()}} |
+%%                       {error, term()} |
+%%                       ignore.
+start_link(Args) ->
+    supervisor:start_link({local, ?SERVER}, ?MODULE, [Args]).
 
 %%%===================================================================
 %%% Supervisor callbacks
@@ -52,17 +52,23 @@ start_link() ->
                   {ok, {SupFlags :: supervisor:sup_flags(),
                         [ChildSpec :: supervisor:child_spec()]}} |
                   ignore.
-init([]) ->
+init([Args]) ->
+    #{
+      auth_host:=Host,
+      auth_port:=PortStr
+     } = Args,
     SupFlags = #{strategy => one_for_one,
                  intensity => 1,
                  period => 5},
-    ProxyChild = #{id => proxy,
-                   start => {proxy, start_link, []},
-                   restart => permanent,
-                   shutdown => 5000,
-                   type => worker,
-                   modules => [proxy]},
-    {ok, {SupFlags, [ProxyChild]}}.
+    AuthCon = #{id => auth_con,
+               start => {auth_con, 
+                         start_link, 
+                         [Host, list_to_integer(PortStr)]},
+               restart => permanent,
+               shutdown => 5000,
+               type => worker,
+               modules => [auth_con]},
+    {ok, {SupFlags, [AuthCon]}}.
 
 %%%===================================================================
 %%% Internal functions
