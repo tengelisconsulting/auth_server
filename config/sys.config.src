@@ -1,38 +1,36 @@
 [
  {kernel,
   [{logger_level, all},
+   {random, thing},
    {logger,
     [{handler, default, logger_std_h,
       #{ level => info }}
     ]}]},
- {server_type,
+
+ {auth_server,
   [
-   {runtime_args, #{
+   {server_type, #{
                     server_type => "${SERVER_TYPE}"
-                   }}
-  ]},
-
- {api_server,
-  [
-   {runtime_args, #{
-                    auth_host => "${AUTH_HOST}",
-                    auth_port => "${AUTH_PORT}",
-                    listen_port => "${API_PORT}",
-                    db_api_port => "${API_DB_PORT}",
-                    db_api_host => "${API_DB_HOST}"
-                   }}
-  ]},
-
-  {auth_server,
-   [
-    {runtime_args, #{
-                     session_s => 3600,
-                     api_port => "${API_PORT}",
-                     priv_key_file => "/app/priv_key",
-                     listen_port => "${AUTH_PORT}",
-                     db_api_port => "${API_DB_PORT}",
-                     db_api_host => "${API_DB_HOST}"
-                    }}
-   ]}
+                   }},
+   {runtime_args,
+    #{
+      auth_server => #{
+                      session_s => 3600,
+                      api_port => "${API_PORT}",
+                      priv_key_file => "/app/priv_key",
+                      listen_port => "${AUTH_PORT}",
+                      db_api_port => "${API_DB_PORT}",
+                      db_api_host => "${API_DB_HOST}"
+                     },
+      api_server => #{
+                      auth_host => "${AUTH_HOST}",
+                      auth_port => "${AUTH_PORT}",
+                      listen_port => "${API_PORT}",
+                      db_api_port => "${API_DB_PORT}",
+                      db_api_host => "${API_DB_HOST}"
+                     }
+     }
+   }
+  ]}
 
 ].

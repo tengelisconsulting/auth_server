@@ -1,4 +1,4 @@
--sname auth_server
+-sname ${SERVER_TYPE}
 
 -setcookie auth_server_cookie
 

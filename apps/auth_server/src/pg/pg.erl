@@ -13,7 +13,7 @@
 %% API
 -export([
          start_link/2,
-         get/1,
+         get/1, get/2,
          post/2,
          get_all_users_permissions/0,
          init_user/2,
@@ -56,6 +56,9 @@ check_username_password(Username, Password) ->
 get(Url) ->
     gen_server:call(?SERVER, {get, Url}).
 
+get(Url, Headers) ->
+    gen_server:call(?SERVER, {get, Url, Headers}).
+
 post(Url, Data) ->
     gen_server:call(?SERVER, {post, Url, Data}).
 
@@ -85,8 +88,17 @@ start_link(Host, Port) ->
 init([Host, Port]) ->
     process_flag(trap_exit, true),
     ConName = pg_con1,
-    {ok, _Pid} = req_mgr:open(ConName, Host, Port),
-    {ok, #state{con=ConName}}.
+    ConOpenResult = req_mgr:open(ConName, Host, Port),
+    case ConOpenResult of
+        {error,
+         {shutdown,
+          {failed_to_start_child, ConName,
+           {already_started, _Pid }}}} ->
+            {ok, #state{con=ConName}};
+        {ok, _Pid} ->
+            {ok, #state{con=ConName}}
+    end.
+
 
 %%--------------------------------------------------------------------
 %% @private
@@ -103,8 +115,11 @@ init([Host, Port]) ->
                          {noreply, NewState :: term(), hibernate} |
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
-handle_call({get, Url}, _From, #state{con=Con}=State) ->
-    try req_worker:get(Con, Url) of
+handle_call({get, Url}, From, State) ->
+    handle_call({get, Url, []}, From, State);
+handle_call({get, Url, Headers}, _From, #state{con=Con}=State) ->
+    logger:info("handling get to ~p ...", [Url]),
+    try req_worker:get(Con, Url, Headers) of
         {Status, Body} ->
             {reply, {Status, jsone:decode(Body)}, State}
     catch

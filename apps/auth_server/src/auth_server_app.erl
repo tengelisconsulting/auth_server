@@ -12,9 +12,11 @@
 start(_StartType, _StartArgs) ->
     {ok, #{
            server_type:=ServerStr
-          }} = application:get_env(server_type, runtime_args),
+          }} = application:get_env(auth_server, server_type),
     Server = list_to_atom(ServerStr),
-    {ok, RuntimeArgs} = application:get_env(Server, runtime_args),
+    {ok, #{
+           Server := RuntimeArgs
+          }} = application:get_env(auth_server, runtime_args),
     #{
       listen_port := ListenPortStr
      } = RuntimeArgs,
@@ -46,7 +48,7 @@ routes(auth_server) ->
     ];
 routes(api_server) ->
     [
-     {"/api/*", base_handler,
+     {"/api/[...]", base_handler,
       [base_handler, api_request]}
     ].
 

@@ -63,8 +63,16 @@ start_link(Host, Port) ->
 init([Host, Port]) ->
     process_flag(trap_exit, true),
     ConName = auth_con1,
-    {ok, _Pid} = req_mgr:open(ConName, Host, Port),
-    {ok, #state{con=ConName}}.
+    ConOpenResult = req_mgr:open(ConName, Host, Port),
+    case ConOpenResult of
+        {error,
+         {shutdown,
+          {failed_to_start_child, ConName,
+           {already_started, _Pid }}}} ->
+            {ok, #state{con=ConName}};
+        {ok, _Pid} ->
+            {ok, #state{con=ConName}}
+    end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -83,6 +91,8 @@ init([Host, Port]) ->
                          {stop, Reason :: term(), NewState :: term()}.
 handle_call({get, Url, Headers}, _From, #state{con=Con}=State) ->
     try req_worker:get(Con, Url, Headers) of
+        {Status, no_data} ->
+            {reply, {Status, <<"">>}, State};
         {Status, Body} ->
             {reply, {Status, jsone:decode(Body)}, State}
     catch
