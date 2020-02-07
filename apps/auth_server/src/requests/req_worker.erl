@@ -101,9 +101,9 @@ handle_call({get, Url, Headers}, _From, State) ->
     #state{con_pid=ConPid}=State,
     StreamRef = gun:get(ConPid, Url, Headers),
     case gun:await(ConPid, StreamRef) of
-        {response, fin, Status, _Headers} ->
+        {response, fin, Status, _ResHeaders} ->
             {reply, {Status, no_data}, State};
-        {response, nofin, Status, _Headers} ->
+        {response, nofin, Status, _ResHeaders} ->
             {ok, Body} = gun:await_body(ConPid, StreamRef),
             {reply, {Status, Body}, State}
     end.

@@ -35,6 +35,7 @@ allowed_methods(Req, #state{op=[Mod, Fn]} = State) ->
 content_types_accepted(Req, State) ->
     {[
       {<<"application/json">>, json_to_input},
+      {<<"*/*">>, json_to_input},
       {undefined, json_to_input}
      ], Req, State}.
 
@@ -121,10 +122,8 @@ auth_username_password(Req0, #state{data=Data} = State0) ->
 
 user_id(allowed_methods) -> [<<"GET">>].
 user_id(Req0, State0) ->
-    logger:info("begin"),
     case get_user_id(Req0) of
         {ok, UserId} ->
-            logger:info("end"),
             {true, UserId, Req0, State0};
         _ ->
             {false, <<"">>,
@@ -133,11 +132,9 @@ user_id(Req0, State0) ->
 
 api_request(allowed_methods) -> [<<"GET">>, <<"POST">>, <<"PUT">>].
 api_request(Req0, State0) ->
-    logger:info("begin"),
     {Status, UserId} = proxy:verify(Req0, State0),
     case Status of
         200 ->
-            logger:info("Verified"),
             FullPath = cowboy_req:path(Req0),
             [<<>>, EffectivePath] = binary:split(FullPath, <<"/api">>),
             Qs = cowboy_req:qs(Req0),
@@ -146,10 +143,8 @@ api_request(Req0, State0) ->
                                    <<EffectivePath/binary, <<"?">>/binary, Qs/binary>>,
                                    UserId
                                   ),
-            logger:info("status: ~p", [Status]),
             %% %% Req = cowboy_req:set_resp_body(Response),
             %% Req = cowboy_req:reply(Status, Req0),
-            logger:info("end"),
             {true, Response, Req0, State0};
         _ ->
             {false, <<"">>, cowboy_req:reply(401, Req0), State0}
