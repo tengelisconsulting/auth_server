@@ -118,7 +118,6 @@ init([Host, Port]) ->
 handle_call({get, Url}, From, State) ->
     handle_call({get, Url, []}, From, State);
 handle_call({get, Url, Headers}, _From, #state{con=Con}=State) ->
-    logger:info("handling get to ~p ...", [Url]),
     try req_worker:get(Con, Url, Headers) of
         {Status, Body} ->
             {reply, {Status, jsone:decode(Body)}, State}

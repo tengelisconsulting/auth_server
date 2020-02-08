@@ -30,7 +30,7 @@
 %%% API
 %%%===================================================================
 get_session_user_id(Headers) ->
-    Url = "/session/user-id",
+    Url = "/auth/session/user-id",
     gen_server:call(?SERVER, {get, Url, Headers}).
 
 %%--------------------------------------------------------------------
@@ -89,7 +89,11 @@ init([Host, Port]) ->
                          {noreply, NewState :: term(), hibernate} |
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
-handle_call({get, Url, Headers}, _From, #state{con=Con}=State) ->
+handle_call({get, Url, HeadersMap}, _From, #state{con=Con}=State) ->
+    Headers = [
+               {<<"accept">>, <<"application/json">>},
+               {<<"authorization">>, maps:get(<<"authorization">>, HeadersMap)}
+              ],
     try req_worker:get(Con, Url, Headers) of
         {Status, no_data} ->
             {reply, {Status, <<"">>}, State};

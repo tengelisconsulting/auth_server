@@ -37,13 +37,13 @@ stop(_State) ->
 %% internal functions
 routes(auth_server) ->
     [
-     {"/permission/check", base_handler,
+     {"/auth/permission/check", base_handler,
       [base_handler, check_permission]},
-     {"/authenticate/username-password", base_handler,
+     {"/auth/authenticate/username-password", base_handler,
       [base_handler, auth_username_password]},
-     {"/account/create", base_handler,
+     {"/auth/account/create", base_handler,
       [base_handler, create_account]},
-     {"/session/user-id", base_handler,
+     {"/auth/session/user-id", base_handler,
       [base_handler, user_id]}
     ];
 routes(api_server) ->
