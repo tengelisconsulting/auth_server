@@ -90,18 +90,23 @@ init([Host, Port]) ->
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
 handle_call({get, Url, HeadersMap}, _From, #state{con=Con}=State) ->
-    Headers = [
-               {<<"accept">>, <<"application/json">>},
-               {<<"authorization">>, maps:get(<<"authorization">>, HeadersMap)}
-              ],
-    try req_worker:get(Con, Url, Headers) of
-        {Status, no_data} ->
-            {reply, {Status, <<"">>}, State};
-        {Status, Body} ->
-            {reply, {Status, jsone:decode(Body)}, State}
-    catch
-        _:Error ->
-            {reply, {500, Error}, State}
+    case maps:is_key(<<"authorization">>, HeadersMap) of
+        true ->
+            Headers = [
+                       {<<"accept">>, <<"application/json">>},
+                       {<<"authorization">>, maps:get(<<"authorization">>, HeadersMap)}
+                      ],
+            try req_worker:get(Con, Url, Headers) of
+                {Status, no_data} ->
+                    {reply, {Status, <<"">>}, State};
+                {Status, Body} ->
+                    {reply, {Status, jsone:decode(Body)}, State}
+            catch
+                _:Error ->
+                    {reply, {500, Error}, State}
+            end;
+        false ->
+            {reply, {401, <<"set 'authorization' header">>}, State}
     end.
 
 %%--------------------------------------------------------------------
