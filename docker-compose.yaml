@@ -2,7 +2,7 @@ version: "3.4"
 services:
 
   auth_server:
-    image: tengelisconsulting/auth_server:dev
+    image: tengelisconsulting/auth_server:${AUTH_SERVER_TAG}
     network_mode: "host"
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
@@ -15,7 +15,7 @@ services:
       - AUTH_PORT
 
   api_server:
-    image: tengelisconsulting/auth_server:dev
+    image: tengelisconsulting/auth_server:${API_SERVER_TAG}
     network_mode: "host"
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
@@ -39,7 +39,7 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
 
   postgrest:
-    image: tengelisconsulting/karma_postgrest:latest
+    image: tengelisconsulting/karma_postgrest:${POSTGREST_TAG}
     network_mode: "host"
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
