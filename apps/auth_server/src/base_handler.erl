@@ -55,9 +55,19 @@ json_to_input(Req0, State0) ->
     {Success, Req, State}.
 
 res_to_json(Req0, State0) ->
-    {_Success, Response, Req, State} = handle(Req0, State0),
+    {CowboyProceed, Response, Req, State} = handle(Req0, State0),
+    %% instead of taking the 'CowboyProceed' atom here,
+    %% just send the intended status up.
+    %% Then, you can control the order of setting it,
+    %% because 'set_resp_body' must be done first.
     BodyAsJson = jsone:encode(Response),
-    {BodyAsJson, Req, State}.
+    case CowboyProceed of
+        true ->
+            {BodyAsJson, Req, State};
+        _ ->
+            Req1 = cowboy_req:set_resp_body(BodyAsJson, Req),
+            {CowboyProceed, Req1, State}
+    end.
 
 
 %% internal
@@ -126,28 +136,33 @@ user_id(Req0, State0) ->
         {ok, UserId} ->
             {true, UserId, Req0, State0};
         _ ->
-            {false, <<"">>,
+            {stop, <<"">>,
              cowboy_req:reply(401, Req0), State0}
     end.
 
 api_request(allowed_methods) -> [<<"GET">>, <<"POST">>, <<"PUT">>].
 api_request(Req0, State0) ->
-    {Status, UserId} = proxy:verify(Req0, State0),
-    case Status of
+    {AuthStatus, UserId} = proxy:verify(Req0, State0),
+    case AuthStatus of
         200 ->
             FullPath = cowboy_req:path(Req0),
             [<<>>, EffectivePath] = binary:split(FullPath, <<"/api">>),
             Qs = cowboy_req:qs(Req0),
-            {Status, Response} = proxy:proxy_to_pg(
+            {ReqStatus, Response} = proxy:proxy_to_pg(
                                    cowboy_req:method(Req0),
                                    <<EffectivePath/binary, <<"?">>/binary, Qs/binary>>,
                                    UserId
                                   ),
-            %% %% Req = cowboy_req:set_resp_body(Response),
-            %% Req = cowboy_req:reply(Status, Req0),
-            {true, Response, Req0, State0};
+            case ReqStatus of
+                200 ->
+                    {true, Response, Req0, State0};
+                _ ->
+                    Req1 = cowboy_req:set_resp_body(jsone:encode(Response), Req0),
+                    Req = cowboy_req:reply(ReqStatus, Req1),
+                    {stop, Response, Req, State0}
+            end;
         _ ->
-            {false, <<"">>, cowboy_req:reply(401, Req0), State0}
+            {stop, <<"">>, cowboy_req:reply(401, Req0), State0}
     end.
 
 

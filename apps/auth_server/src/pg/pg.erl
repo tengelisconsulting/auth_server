@@ -126,6 +126,7 @@ handle_call({get, Url, Headers}, _From, #state{con=Con}=State) ->
             {reply, {500, Error}, State}
     end;
 handle_call({post, Url, Data}, _From, #state{con=Con}=State) ->
+    %% probably can just pass binary here, to save work when proxying
     ReqBody = jsone:encode(Data),
     try req_worker:post(Con, Url, ReqBody) of
         {Status, Body} ->
