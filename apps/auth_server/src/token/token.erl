@@ -13,8 +13,10 @@
 %% API
 -export([
          start_link/2,
-         from_user_id/1,
-         to_user_id/1
+         to_refresh_token/1,
+         to_session_token/1,
+         verify_refresh_token/1,
+         verify_session_token/1
         ]).
 
 %% gen_server callbacks
@@ -31,11 +33,27 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-from_user_id(UserId) ->
-    gen_server:call(?SERVER, {from_user_id, UserId}).
+to_refresh_token(UserId) ->
+    gen_server:call(?SERVER, {to_refresh_token, UserId}).
 
-to_user_id(Token) ->
-    gen_server:call(?SERVER, {to_user_id, Token}).
+to_session_token(UserId) ->
+    gen_server:call(?SERVER, {to_session_token, UserId}).
+
+%% return user id
+verify_refresh_token(Token) ->
+    gen_server:call(?SERVER, {verify_refresh_token, Token}).
+
+%% return user id
+verify_session_token(Token) ->
+    gen_server:call(?SERVER, {verify_session_token, Token}).
+
+%% from_user_id(UserId) ->
+%%     gen_server:call(?SERVER, {from_user_id, UserId}).
+
+%% to_user_id(Token) ->
+%%     gen_server:call(?SERVER, {to_user_id, Token}).
+
+
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -85,21 +103,35 @@ init([PrivKeyFile, SessionS]) ->
                          {noreply, NewState :: term(), hibernate} |
                          {stop, Reason :: term(), Reply :: term(), NewState :: term()} |
                          {stop, Reason :: term(), NewState :: term()}.
-handle_call({to_user_id, Token}, _From, #state{priv_key=PrivKey} = State) ->
-    case jwt:decode(Token, PrivKey) of
-        {ok, Claims} ->
-            #{<<"user_id">> := UserId} = Claims,
-            {reply, {ok, UserId}, State};
-        NoLuck ->
-            {reply, NoLuck, State}
-    end;
-handle_call({from_user_id, UserId}, _From,
+handle_call({verify_session_token, Token}, _From,
+            #state{priv_key=PrivKey} = State) ->
+    {reply,
+     verify_token(Token, PrivKey, false),
+     State};
+handle_call({verify_refresh_token, Token}, _From,
+            #state{priv_key=PrivKey} = State) ->
+    {reply,
+     verify_token(Token, PrivKey, true),
+     State};
+handle_call({to_refresh_token, UserId}, _From,
             #state{priv_key=PrivKey,
                    session_s=SessionS} = State) ->
-    Claims = [
-              {<<"user_id">>, UserId}
-             ],
-    Response = jwt:encode(<<"HS256">>, Claims, SessionS, PrivKey),
+    Response = create_token(
+                 UserId, PrivKey,
+                 #{session_timeout_s => SessionS,
+                   is_refresh => true
+                  }
+                ),
+    {reply, Response, State};
+handle_call({to_session_token, UserId}, _From,
+            #state{priv_key=PrivKey,
+                   session_s=SessionS} = State) ->
+    Response = create_token(
+                 UserId, PrivKey,
+                 #{session_timeout_s => SessionS,
+                   is_refresh => false
+                  }
+                ),
     {reply, Response, State}.
 
 %%--------------------------------------------------------------------
@@ -173,3 +205,38 @@ format_status(_Opt, Status) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+create_token(UserId, PrivKey,
+             #{is_refresh := IsRefresh,
+               session_timeout_s := SessionTimeoutS}) ->
+    Claims = [
+              {<<"user_id">>, UserId},
+              {<<"is_refresh">>, atom_to_binary(IsRefresh, utf8)}
+             ],
+    jwt:encode(<<"HS256">>, Claims, SessionTimeoutS, PrivKey).
+
+decode_token(Token, PrivKey) ->
+    case jwt:decode(Token, PrivKey) of
+        {ok, Claims} ->
+            case Claims of
+                #{
+                  <<"user_id">> := UserId,
+                  <<"is_refresh">> := IsRefresh
+                 } -> {ok, #{
+                           user_id => UserId,
+                           is_refresh => binary_to_atom(IsRefresh, utf8)
+                          }};
+                _ -> {fail, <<"failed to parse jwt payload">>}
+            end;
+        JwtFail ->
+            {fail, JwtFail}
+    end.
+
+verify_token(Token, PrivKey, IsRefresh) ->
+    case decode_token(Token, PrivKey) of
+        {ok, #{
+               user_id := UserId,
+               is_refresh := IsRefresh
+              }} -> {ok, UserId};
+        {fail, Reason} -> Reason;
+        _ -> {error, bad_token_payload}
+    end.

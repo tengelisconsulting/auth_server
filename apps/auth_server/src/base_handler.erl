@@ -16,6 +16,7 @@
          user_id/1, user_id/2,
          check_permission/1, check_permission/2,
          create_account/1, create_account/2,
+         session_refresh/1, session_refresh/2,
          auth_username_password/1, auth_username_password/2
         ]).
 
@@ -45,9 +46,18 @@ content_types_provided(Req, State) ->
       {undefined, res_to_json}
      ], Req, State}.
 
+
+get_body_data(Req0) ->
+    case cowboy_req:has_body(Req0) of
+        true ->
+            {ok, DataStr, Req1} = read_body(Req0),
+            {jsone:decode(DataStr), Req1};
+        _ -> {none, Req0}
+    end.
+
+
 json_to_input(Req0, State0) ->
-    {ok, DataStr, Req1} = read_body(Req0),
-    Data = jsone:decode(DataStr),
+    {Data, Req1} = get_body_data(Req0),
     State1 = State0#state{data=Data},
     {Success, Response, Req2, State} = handle(Req1, State1),
     BodyAsJson = jsone:encode(Response),
@@ -100,7 +110,7 @@ create_account(Req0, #state{data=Data}=State0) ->
 check_permission(allowed_methods) -> [<<"GET">>].
 check_permission(Req0, State0) ->
     #{code := PermissionCode} = cowboy_req:match_qs([code], Req0),
-    case get_user_id(Req0) of
+    case session_user_id(Req0) of
         {ok, UserId} ->
             Response = mem_db:check_permission(UserId, PermissionCode),
             {true, Response, Req0, State0};
@@ -123,16 +133,12 @@ auth_username_password(Req0, #state{data=Data} = State0) ->
         <<"">> ->
             {halt, <<"">>, cowboy_req:reply(401, Req0), State0};
         UserId ->
-            {ok, Token} = token:from_user_id(UserId),
-            Req = cowboy_req:set_resp_cookie(
-                     <<"auth_token">>, Token, Req0
-                   ),
-            {true, Token, Req, State0}
+            new_session_response(Req0, State0, UserId)
     end.
 
 user_id(allowed_methods) -> [<<"GET">>].
 user_id(Req0, State0) ->
-    case get_user_id(Req0) of
+    case session_user_id(Req0) of
         {ok, UserId} ->
             {true, UserId, Req0, State0};
         _ ->
@@ -165,14 +171,44 @@ api_request(Req0, State0) ->
             {stop, <<"">>, cowboy_req:reply(401, Req0), State0}
     end.
 
+session_refresh(allowed_methods) -> [<<"POST">>].
+session_refresh(Req0, State0) ->
+    Cookies = cowboy_req:parse_cookies(Req0),
+    CookieToken = lists:keyfind(<<"karma_refresh_token">>, 1, Cookies),
+    case CookieToken of
+        {<<"karma_refresh_token">>, Token} ->
+            case token:verify_refresh_token(Token) of
+                {ok, UserId} ->
+                    new_session_response(Req0, State0, UserId);
+                _ ->
+                    {stop, <<"bad refresh token">>, cowboy_req:reply(401, Req0), State0}
+            end;
+        false ->
+            {stop, <<"no refresh token">>, cowboy_req:reply(401, Req0), State0}
+    end.
+
 
 %% Internal
-get_user_id(Req) ->
+session_user_id(Req) ->
     %% you need to reorganize this, because it is tempting to call this
     %% function from the api_server, but 'token' will not be running there
     AuthHeader = cowboy_req:header(<<"authorization">>, Req, <<"">>),
     case binary:split(AuthHeader, <<"Bearer ">>) of
         [<<>>, AuthToken] ->
-            token:to_user_id(AuthToken);
+            token:verify_session_token(AuthToken);
         _ -> {error, no_auth_header}
     end.
+
+new_session_response(Req0, State, UserId) ->
+    {ok, SessionToken} = token:to_session_token(UserId),
+    {ok, RefreshToken} = token:to_refresh_token(UserId),
+    Req = cowboy_req:set_resp_cookie(
+            <<"karma_refresh_token">>,
+            RefreshToken,
+            Req0,
+            #{
+              http_only => true,
+              path => <<"/">>
+             }
+           ),
+    {true, SessionToken, Req, State}.

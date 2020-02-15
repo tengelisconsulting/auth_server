@@ -43,6 +43,8 @@ routes(auth_server) ->
       [base_handler, auth_username_password]},
      {"/auth/account/create", base_handler,
       [base_handler, create_account]},
+     {"/auth/session/refresh", base_handler,
+      [base_handler, session_refresh]},
      {"/auth/session/user-id", base_handler,
       [base_handler, user_id]}
     ];
